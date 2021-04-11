@@ -1,0 +1,3 @@
+m_ForkWorkflow =
+NodeInstanceLog(log_date, processInstanceId, connection, nodeId, nodeInstanceId, nodeType:"Split", referenceId, slaCompliance, sla_due_date, type:1)
+-: ForkWorkflow(log_date, processInstanceId:P, connection, nodeId, nodeInstanceId, nodeType, referenceId, slaCompliance, sla_due_date, type)
