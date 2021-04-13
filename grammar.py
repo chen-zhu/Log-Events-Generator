@@ -16,27 +16,38 @@ class grammar:
         return Group(self.Table()) + ZeroOrMore(Group(self.Separator + self.Table()))
 
     def Table(self):
-        return self.Naming + Literal("(") + self.TableColumn() + ZeroOrMore(
-            self.Separator + self.TableColumn()) + Literal(")")
+        return self.Naming \
+               + Literal("(").suppress() \
+               + Group(self.TableColumn() + ZeroOrMore(self.Separator + self.TableColumn())) \
+               + Literal(")").suppress()
 
     def TableColumn(self):
-        return (self.Naming + Literal(":") + Group(self.Condition())) | self.Naming
+        return Group(self.Naming + Literal(":") + self.Condition()) \
+               | self.Naming
 
     def Condition(self):
-        return (Combine(Literal('"') + self.Naming + Literal('"'))) | self.Naming | self.FNumber
+        return (Combine(Literal('"') + self.Naming + Literal('"'))) \
+               | self.Naming \
+               | self.FNumber
 
     def Header(self):
         return OneOrMore(Group(self.Sugar + self.Event()))
 
     def Event(self):
-        return self.Naming + "(" + self.EventColumn() + ZeroOrMore(self.Separator + self.EventColumn()) + ")"
+        return self.Naming \
+               + Literal("(").suppress() \
+               + Group(self.EventColumn() + ZeroOrMore(self.Separator + self.EventColumn())) \
+               + Literal(")").suppress()
 
     def EventColumn(self):
-        return (self.Naming + Literal(":") + Group(self.Condition())) | Group(self.NestedTable()) | self.Naming
+        return Group(self.Naming + Literal(":") + self.Condition()) \
+               | Group(self.NestedTable()) \
+               | self.Naming
 
     def NestedTable(self):
-        return self.Naming + "<" + self.Naming + ">(" + self.NestedTableColumn() + ZeroOrMore(
-            self.Separator + self.NestedTableColumn()) + Literal(")")
+        return self.Naming + "<" + self.Naming + ">(" \
+               + self.NestedTableColumn() + ZeroOrMore(self.Separator + self.NestedTableColumn()) \
+               + Literal(")")
 
     def NestedTableColumn(self):
         return self.Naming + Optional(Literal(":") + self.Naming)

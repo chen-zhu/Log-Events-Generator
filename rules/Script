@@ -1,0 +1,3 @@
+m_Script =
+NodeInstanceLog(log_date, processInstanceId, connection, nodeId, nodeInstanceId, nodeType:"ActionNode", referenceId, slaCompliance, sla_due_date, type:T, nodeContainerId)
+-: Script(log_date, processInstanceId, connection, nodeId, nodeInstanceId, nodeType, referenceId, slaCompliance, sla_due_date, nodeContainerId, type:T==0 ? "Enter":"Exit")

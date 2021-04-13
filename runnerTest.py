@@ -1,9 +1,3 @@
-'''
-1. Grammar and Parser
-2. Run DB Connector to gather information
-3. Run Validator (syntax check + column check)
-4. Run interpreter
-'''
 import os
 from parser import *
 from pprint import pprint
@@ -23,10 +17,7 @@ if __name__ == "__main__":
 
     for file_name in os.listdir(data_path):
         if file_name in [".DS_Store", "MultiInstance", "Script"]:
+        #if file_name not in ["UserClaimsTask"]:
             continue
         parsed_result = parser().parsingFile(data_path + file_name)
         parser().structurePrettyPrint(parsed_result)
-
-
-
-
