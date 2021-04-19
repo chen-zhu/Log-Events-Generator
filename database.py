@@ -1,6 +1,7 @@
 import mysql.connector
 import os
 from dotenv import load_dotenv
+from pypika import Query, Column, Table, Field
 
 load_dotenv()
 SOURCE_HOST = os.getenv('SOURCE_HOST')
@@ -47,10 +48,23 @@ class database:
             self.table_config_cache[table_name] = {}
             for row_info in table_config:
                 self.table_config_cache[table_name][row_info[0]] = row_info[1].decode()
-        #print(self.table_config_cache)
+        #print("table_columns_info", self.table_config_cache)
 
-    def prepare_target_tables(self):
-        print(1)
+    def prepare_target_tables(self, table_with_config: dict):
+        for table_name in table_with_config:
+            params = [Column(table_name + "id", "INT AUTO_INCREMENT")]
+            for field in table_with_config[table_name]:
+                params.append(Column(field, table_with_config[table_name][field]))
+            query = Query.create_table(table_name).columns(*params).primary_key(table_name + "id").get_sql(quote_char="`")
+            #print(query)
+            try:
+                self.target_cursor.execute(query)
+            except Exception as ex:
+                print("[ERROR]: Unable to create Target Event table <" + table_name + ">. Abort! DB Response: ", ex)
+                return
+            print("[INFO]: Event table <" + table_name + "> created.")
+
+
 
 
 if __name__ == "__main__":
@@ -60,3 +74,4 @@ if __name__ == "__main__":
     # for x in db.source_cursor:
     #    print(x)
     db.table_columns_info("nodeinstancelog")
+    #db.prepare_target_tables(1,1)

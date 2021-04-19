@@ -8,6 +8,7 @@ import os
 from parser import *
 from validator import *
 from database import *
+from interpreter import *
 from pprint import pprint
 import pathlib
 from dotenv import load_dotenv
@@ -35,6 +36,14 @@ if __name__ == "__main__":
         v = validator(p, db)
         v.validate_rule_parameters()
         v.validate_source_database()
+
+        i = interpreter(p, db)
+        i.field_mappings()
+
+        db.prepare_target_tables(i.target_col_type)
+        i.query_generator()
+
+
 
 
 
