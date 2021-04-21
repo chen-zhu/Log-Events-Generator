@@ -32,6 +32,7 @@ class parser:
             print(file_path + " parsing failed: ")
             print(ex)
             return False
+        print(parsed_result)
         return parsed_result
 
     def tokenize(self, parsed_result):
@@ -59,7 +60,7 @@ class parser:
                         col_name = col[0]
                         third_val = col[2]
                         #only pick out variable assignment. Ignore string/number filter!
-                        if not self.is_string_or_number(third_val):
+                        if not self.is_string_or_number_or_NULL_or_bool(third_val):
                             if third_val in self.body_variable_map:
                                 self.body_variable_map[third_val].append(table_name + "." + col_name)
                             else:
@@ -85,13 +86,17 @@ class parser:
         print("Header Condition: ", self.header_condition_columns)
         # print("Header All: ", self.header_all_columns)
 
-    def is_string_or_number(self, value):
+    def is_string_or_number_or_NULL_or_bool(self, value):
         #only if
         if "\"" in value:
             return True
         if "'" in value:
             return True
         if value.replace('.', '', 1).isdigit():
+            return True
+        if value.lower() in ["null", "notnull"]:
+            return True
+        if value.lower() in ["true", "false"]:
             return True
         return False
 
