@@ -41,37 +41,51 @@ class database:
         # only run if there is no such table cached!
         if table_name not in self.table_config_cache:
             query = "SHOW FIELDS FROM " + table_name
-            #query = "SELECT DISTINCT COLUMN_NAME, DATA_TYPE  FROM INFORMATION_SCHEMA.COLUMNS " \
+            # query = "SELECT DISTINCT COLUMN_NAME, DATA_TYPE  FROM INFORMATION_SCHEMA.COLUMNS " \
             #        "WHERE TABLE_NAME = '" + table_name + "'"
             self.source_cursor.execute(query)
             table_config = self.source_cursor.fetchall()
             self.table_config_cache[table_name] = {}
             for row_info in table_config:
                 self.table_config_cache[table_name][row_info[0]] = row_info[1].decode()
-        #print("table_columns_info", self.table_config_cache)
+        # print("table_columns_info", self.table_config_cache)
 
     def prepare_target_tables(self, table_with_config: dict):
         for table_name in table_with_config:
             params = [Column(table_name + "id", "INT AUTO_INCREMENT")]
             for field in table_with_config[table_name]:
                 params.append(Column(field, table_with_config[table_name][field]))
-            query = Query.create_table(table_name).columns(*params).primary_key(table_name + "id").get_sql(quote_char="`")
-            #print(query)
+            query = Query.create_table(table_name).columns(*params).primary_key(table_name + "id").get_sql(
+                quote_char="`")
+            # print(query)
             try:
                 self.target_cursor.execute(query)
             except Exception as ex:
                 print("[ERROR]: Unable to create Target Event table <" + table_name + ">. Abort! DB Response: ", ex)
-                return
+                continue
+                # return
             print("[INFO]: Event table <" + table_name + "> created.")
 
+    def execute_query(self, query, run_on_source, need_commit=False):
+        # print("Received query", query)
+        if run_on_source:
+            using_db = self.source_db
+        else:
+            using_db = self.target_db
+        running_cursor = using_db.cursor()
+        running_cursor.execute(query)
+        rows = running_cursor.fetchall()
 
+        if need_commit:
+            using_db.commit()
+        return rows
 
 
 if __name__ == "__main__":
     db = database()
-    #db.prepare_target_db()
+    # db.prepare_target_db()
     # db.source_cursor.execute("SHOW DATABASES")
     # for x in db.source_cursor:
     #    print(x)
     db.table_columns_info("nodeinstancelog")
-    #db.prepare_target_tables(1,1)
+    # db.prepare_target_tables(1,1)
