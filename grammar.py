@@ -52,7 +52,8 @@ class grammar:
                + Literal(")")
 
     def NestedTableColumn(self):
-        return self.Naming + Optional(Literal(":") + self.Naming)
+        return Group(self.Naming + Literal(":") + self.Naming) \
+               | self.Naming
 
     def Syntax(self):
         mapping_rules = self.Naming + Literal("=").suppress() + Group(self.Body()) + Group(self.Header())

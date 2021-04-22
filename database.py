@@ -52,10 +52,11 @@ class database:
 
     def prepare_target_tables(self, table_with_config: dict):
         for table_name in table_with_config:
-            params = [Column(table_name + "id", "INT AUTO_INCREMENT")]
+            # The first target column must always be surrogate key!
+            params = [Column(table_name + "_PK", "BIGINT AUTO_INCREMENT")]
             for field in table_with_config[table_name]:
                 params.append(Column(field, table_with_config[table_name][field]))
-            query = Query.create_table(table_name).columns(*params).primary_key(table_name + "id").get_sql(
+            query = Query.create_table(table_name).columns(*params).primary_key(table_name + "_PK").get_sql(
                 quote_char="`")
             # print(query)
             try:

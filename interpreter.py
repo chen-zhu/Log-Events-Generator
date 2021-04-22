@@ -10,6 +10,7 @@ class interpreter:
         # header col -> type
         self.target_col_type = {}
         self.target_col_name = {}
+        self.contain_nested_tables = []
 
     def field_mappings(self):
         # 1. map type
@@ -43,27 +44,57 @@ class interpreter:
                         self.target_col_type[event_name][target_column] = "varchar(255)"
                         field_unknown_type.append(target_column)
                 else:
-                    self.target_col_type[event_name][condition[0]] = "varchar(255)"
-                    field_unknown_type.append(condition[0])
+                    # it is an unknown column, which means that it might be nested table!
+                    # TODO: this handle is terrible~ Tryna fix this later!
+                    if '<' in list(condition) and '>(' in list(condition) and ')' in list(condition):
+                        nested_table_name = condition[0]
+                        self.target_col_type[nested_table_name] = {event_name + "_FK": "BIGINT"}
+                        nested_table_params = list(condition)[
+                                              list(condition).index('>(') + 1:list(condition).index(')')]
+                        # print(nested_table_params)
+                        for param in nested_table_params:
+                            source_column = None
+                            target_column = None
+                            if isinstance(param, str):
+                                source_column = param
+                                target_column = param
+                            else:
+                                source_column = self.parser.body_variable_map[param[2]][0]
+                                target_column = param[0]
+                            # print("Source and Target: ", source_column, target_column)
+                            if source_column in all_source_type:
+                                self.target_col_type[nested_table_name][target_column] = all_source_type[source_column]
+                            else:
+                                self.target_col_type[nested_table_name][target_column] = "varchar(255)"
+                                field_unknown_type.append(target_column)
+                        self.contain_nested_tables.append(event_name)
+                    else:
+                        self.target_col_type[event_name][condition[0]] = "varchar(255)"
+                        field_unknown_type.append(condition[0])
 
         if len(field_unknown_type) > 0:
             print("[WARNING]: The following event attribute cannot be mapped to corresponding data type. "
-                  "Set to Varchar(255) by default.")
+                  "Set to Varchar(255) by default.", field_unknown_type)
         print("\nTarget Column Mapping", self.target_col_type, "\n")
 
     def query_generator(self):
         # process join tables - [BODY]
         tables = []
         table_obj_map = {}
+        join_condition_queue = {}
+        base_table_name = ""
         for table in self.parser.body_all_columns:
+            base_table_name = table if len(base_table_name) == 0 else base_table_name
             table_obj = Table(table)
             tables.append(table_obj)
             table_obj_map[table] = table_obj
+            join_condition_queue[table] = []
         from_table = tables[0]
-        join = tables[1:]
+        join = table_obj_map.copy()
+        join.pop(base_table_name)
+        print(join)
 
         # process join conditions - [BODY]
-        join_condition_queue = []
         for var in self.parser.body_variable_map:
             # only join when more then 1 table name exist!
             if len(self.parser.body_variable_map[var]) > 2:
@@ -74,9 +105,10 @@ class interpreter:
                     else:
                         pre = previous_table.split('.')
                         curr = table_name.split('.')
-
-                        join_condition_queue.append([getattr(table_obj_map[pre[0]], pre[1]),
-                                                     getattr(table_obj_map[curr[0]], curr[1])])
+                        join_condition_queue[curr[0]].append([getattr(table_obj_map[pre[0]], pre[1]),
+                                                              getattr(table_obj_map[curr[0]], curr[1])])
+                        # join_condition_queue.append([getattr(table_obj_map[pre[0]], pre[1]),
+                        #                            getattr(table_obj_map[curr[0]], curr[1])])
 
         # process where filters - [BODY]
         where = []
@@ -97,18 +129,22 @@ class interpreter:
 
         q = MySQLQuery.from_(from_table)
 
-        for j_table in join:
-            q = q.join(j_table)
+        print(join_condition_queue, "\n")
 
-        j_c = None
-        for j_condition in join_condition_queue:
-            if j_c is None:
-                j_c = (j_condition[0] == j_condition[1])
-            else:
-                j_c = j_c & (j_condition[0] == j_condition[1])
-        # ONLY perform join condition if it is not empty!
-        if j_c is not None:
-            q = q.on(j_c)
+        #join must be followed by ON~ multiple joins should be separated as well!
+        for join_table_name in join:
+            #print(join_table_name, join[join_table_name])
+            q = q.join(join[join_table_name])
+
+            j_c = None
+            for j_condition in join_condition_queue[join_table_name]:
+                if j_c is None:
+                    j_c = (j_condition[0] == j_condition[1])
+                else:
+                    j_c = j_c & (j_condition[0] == j_condition[1])
+            # ONLY perform join condition if it is not empty!
+            if j_c is not None:
+                q = q.on(j_c)
 
         for w_statement in where:
             q = q.where(w_statement)
@@ -150,9 +186,13 @@ class interpreter:
             while True:
                 query = q_obj[offset:page_size].get_sql()
                 print('[Generated Query]:\n', query)
+                # TODO: Remove Break here!
                 break
                 rows = self.db.execute_query(query, True)
-                self.batch_process_source_data(event_table, rows)
+                if event_table in self.contain_nested_tables:
+                    self.process_source_data_for_nested_table(event_tables, rows)
+                else:
+                    self.batch_process_source_data(event_table, rows)
                 if len(rows) >= page_size:
                     offset += page_size
                     # print("Nest Page: ", offset)
@@ -160,20 +200,22 @@ class interpreter:
                     # print("Final Rows:\n", rows)
                     break
 
-                # TODO: process row and insert into target!
-
     def batch_process_source_data(self, event_table, rows):
         print("Rows count: ", event_table, len(rows))
         bucket = list(self.bucket_split(rows))
         target_table = Table(event_table)
         for each_bucket in bucket:
             q = MySQLQuery.into(target_table)
+            # TODO: some other necessary manipulation before writing data!
             for row in each_bucket:
-                #print(row)
-                q = q.insert((None, ) + row)
+                # print(row)
+                q = q.insert((None,) + row)
             self.db.execute_query(q.get_sql(), False, True)
-            #print("query result: ", q.get_sql())
+            # print("query result: ", q.get_sql())
 
+    # Special handle for the situation when nested_table is involved
+    def process_source_data_for_nested_table(self, event_tables):
+        return 0
 
     def bucket_split(self, in_list):
         bucket_size = 40

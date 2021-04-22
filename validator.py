@@ -42,6 +42,8 @@ class validator:
                     print("[ERROR]: attribute, <" + col + ">, with in the event <" + event_name + "> is unable to locate from rule body. ")
                     return
 
+        # TODO: validate nested table attributes!!!
+
 
 
     def validate_source_database(self):
