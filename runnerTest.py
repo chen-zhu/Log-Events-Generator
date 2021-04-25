@@ -6,6 +6,7 @@ from interpreter import *
 from pprint import pprint
 import pathlib
 from dotenv import load_dotenv
+from fileManager import sorting_csv_files
 
 load_dotenv()
 RULES_DIR = os.getenv('RULES_DIR')
@@ -19,8 +20,8 @@ if __name__ == "__main__":
         size_check -= 1
 
     for file_name in os.listdir(data_path):
-        #if file_name in [".DS_Store", "MultiInstance", "Script"]:
-        if file_name not in ["UserSubmitsTask"]:
+        if file_name in [".DS_Store", "__pycache__"]:
+        #if file_name not in ["UserWorksOnTask"]:
             continue
         p = parser()
         parsed_result = p.parsingFile(data_path + file_name)
@@ -36,3 +37,4 @@ if __name__ == "__main__":
 
         db.prepare_target_tables(i.target_col_type)
         i.events_generator()
+        sorting_csv_files()

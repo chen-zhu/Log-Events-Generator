@@ -47,7 +47,7 @@ class grammar:
                | self.Naming
 
     def NestedTable(self):
-        return self.Naming + "<" + self.Naming + ">(" \
+        return self.Naming + "<" + self.Naming + ZeroOrMore(self.Separator + self.Naming) + ">(" \
                + self.NestedTableColumn() + ZeroOrMore(self.Separator + self.NestedTableColumn()) \
                + Literal(")")
 

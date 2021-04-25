@@ -67,18 +67,20 @@ class database:
                 # return
             print("[INFO]: Event table <" + table_name + "> created.")
 
-    def execute_query(self, query, run_on_source, need_commit=False):
+    def execute_query(self, query, run_on_source=True, need_commit=False, return_last_insert_id=False, dictionary_cursor=False):
         # print("Received query", query)
         if run_on_source:
             using_db = self.source_db
         else:
             using_db = self.target_db
-        running_cursor = using_db.cursor()
+        running_cursor = using_db.cursor(dictionary=dictionary_cursor)
         running_cursor.execute(query)
         rows = running_cursor.fetchall()
 
         if need_commit:
             using_db.commit()
+        if return_last_insert_id:
+            return running_cursor.lastrowid
         return rows
 
 
