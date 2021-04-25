@@ -47,12 +47,13 @@ class grammar:
                | self.Naming
 
     def NestedTable(self):
-        return self.Naming + "<" + self.Naming + ">(" \
+        return self.Naming + "<" + self.Naming + ZeroOrMore(self.Separator + self.Naming) + ">(" \
                + self.NestedTableColumn() + ZeroOrMore(self.Separator + self.NestedTableColumn()) \
                + Literal(")")
 
     def NestedTableColumn(self):
-        return self.Naming + Optional(Literal(":") + self.Naming)
+        return Group(self.Naming + Literal(":") + self.Naming) \
+               | self.Naming
 
     def Syntax(self):
         mapping_rules = self.Naming + Literal("=").suppress() + Group(self.Body()) + Group(self.Header())

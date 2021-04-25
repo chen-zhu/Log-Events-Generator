@@ -44,26 +44,4 @@ if __name__ == "__main__":
         i.events_generator()
 
 
-        '''
-        from pypika import MySQLQuery, Query, Column, Tables, Field
-        history, customers = Tables('history', 'customers')
-        sample = (history.customer_id == customers.id) & (history.customer_id2 == customers.id2)
-        q = MySQLQuery \
-            .from_(history) \
-            .join(customers) \
-            .on(sample) \
-            .select(history.star) \
-            .where(customers.id == 5).where(customers.abd.isnull())
-
-        print(q)
-
-        from pyparsing import Word, alphas, printables
-
-        # define grammar of a greeting
-        greet = Word(printables + " ")
-
-        hello = 'Hel123!@##$$%^&**lo, W"o"rld!'
-        print(hello, "->", greet.parseString(hello))
-        '''
-
 
