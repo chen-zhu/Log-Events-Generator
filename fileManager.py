@@ -5,6 +5,7 @@ import csv
 import json
 from datetime import date, datetime
 import pandas as pd
+from multiprocessing import Lock
 
 load_dotenv()
 CASE_ID_FIELD = os.getenv('CASE_ID_FIELD')
@@ -20,10 +21,13 @@ def write_csv(event_name, row):
         return
 
     file_path = str(pathlib.Path().absolute()) + "/" + OUTPUT_DIR + str(row[CASE_ID_FIELD]) + ".csv"
+    lock = Lock()
+    lock.acquire()
     with open(file_path, "a+") as csv_file:
         csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow([row[CASE_ID_FIELD], event_name, row[EVENT_DATE], json.dumps(row, default=json_serial)])
     csv_file.close()
+    lock.release()
     #sort_file(file_path)
 
 def sort_file(csv_file_path):
