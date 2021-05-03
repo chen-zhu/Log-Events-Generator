@@ -237,12 +237,14 @@ class interpreter:
     def events_generator(self):
         query_objects = self.query_generator()
         EVENT_DATE = os.getenv('EVENT_DATE')
+        CASE_ID_FIELD = os.getenv('CASE_ID_FIELD')
 
         page_size = 400
         for event_table in query_objects:
             q_obj = query_objects[event_table]
-            # Sorting Column: EVENT_DATE
-            q_obj.orderby(EVENT_DATE, order=Order.desc)
+
+            #q_obj.orderby(EVENT_DATE, order=Order.desc) # Sorting Column: EVENT_DATE
+            q_obj.orderby(CASE_ID_FIELD, order=Order.desc)
 
             offset = 0
             while True:
@@ -356,7 +358,7 @@ class interpreter:
         return False
 
     def set_cache(self, name, value):
-        cache_size = 5000
+        cache_size = 10000
         self.LRU_cache[name] = value
         if len(self.LRU_cache) > cache_size:
             for key in self.LRU_cache:

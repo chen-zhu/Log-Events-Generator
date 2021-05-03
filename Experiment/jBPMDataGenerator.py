@@ -58,7 +58,7 @@ def payload_simulator(task_name):
     return payload
 
 
-def process_task_list(task_list):
+def process_task_list(task_list, human_task_counter):
     random.shuffle(task_list)
     for task in task_list:
         task_id = task['task-id']
@@ -69,15 +69,22 @@ def process_task_list(task_list):
             startActiveTask(task_id)
         elif task_status == "InProgress":
             submit_payload = payload_simulator(task['task-name'])
+            sleep(1)
             completeActiveTask(task_id, json.dumps(submit_payload))
+            human_task_counter[0] += 1
+            if (human_task_counter[0] % 1000) == 0:
+                print("\n*" + str(human_task_counter[0]) + "*")
         elif task_status == "Ready":
             claimActiveTask(task_id)
 
 
 if __name__ == "__main__":
-    number_of_instances = 10
+    #number_of_instances = 1
+    number_of_human_tasks = 10 #24000 - 20000
     success_count = 0
-    for x in range(number_of_instances):
+    #for x in range(number_of_instances):
+    x = [0]
+    while x[0] < number_of_human_tasks:
         print(".", end="", flush=True)
         create_instance_payload = {
             "apiName": random_string(),
@@ -88,14 +95,16 @@ if __name__ == "__main__":
 
             while True:
                 task_list = retrieveActiveTasks(process_instance_id)
-                sleep(round(random.random()/2, 3))
+                sleep(round(random.random()/5, 3))
                 if task_list is None:
                     break
                 random.shuffle(task_list)
-                process_task_list(task_list)
+                process_task_list(task_list, x)
+                if x[0] >= number_of_human_tasks:
+                    break
         except Exception as ex:
             process_instance_id = str(process_instance_id) if not None else ""
-            print("Instance generation failed: " + str(x) + "process_instance_id: " + process_instance_id)
+            print("Instance generation failed: process_instance_id: " + process_instance_id)
             continue
         success_count += 1
 
