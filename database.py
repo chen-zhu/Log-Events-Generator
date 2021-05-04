@@ -83,6 +83,17 @@ class database:
             return running_cursor.lastrowid
         return rows
 
+    def cleanup_target(self):
+        tables = self.execute_query("show tables", False)
+        separator = ", "
+        table_list = []
+        for name in tables:
+            table_list.append(name[0])
+        if len(table_list) > 0:
+            sql_command = "DROP TABLE " + separator.join(table_list)
+            ret = self.execute_query(sql_command, False)
+            print("Cleaned up the target schema for next experiments.")
+
 
 if __name__ == "__main__":
     db = database()
