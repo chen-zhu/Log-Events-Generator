@@ -1,6 +1,6 @@
 from pypika import MySQLQuery, Query, Column, Table, Field, CustomFunction, Order
 from pprint import pprint
-from fileManager import write_csv
+from fileManager import write_csv, handle_overflow_cache, read_overflow_cache, nested_table_file_header_write, nested_table_file_body_write
 from dotenv import load_dotenv
 import os
 
@@ -249,8 +249,9 @@ class interpreter:
             offset = 0
             while True:
                 query = q_obj[offset:page_size].get_sql()
-                #print('\n[Generated Query]:\n', query)
+                print('\n[Generated Query]:\n', query)
                 rows = self.db.execute_query(query, True, False, False, True)
+                #print("Rows count: ", event_table, len(rows))
                 if event_table in self.contain_nested_tables:
                     #rows = self.db.execute_query(query, True, False, False, True)
                     self.process_source_data_for_nested_table(event_table, rows)
@@ -263,7 +264,6 @@ class interpreter:
                     break
 
     def batch_process_source_data(self, event_table, rows):
-        #print("Rows count: ", event_table, len(rows))
         bucket = list(self.bucket_split(rows))
         target_table = Table(event_table)
         for each_bucket in bucket:
@@ -276,39 +276,34 @@ class interpreter:
                     insert_tpl += (val,)
                 q = q.insert(insert_tpl)
             ret = self.db.execute_query(q.get_sql(), False, True)
-            # print("query result: ", q.get_sql())
 
     # Special handle for the situation when nested_table is involved
     def process_source_data_for_nested_table(self, event_table, rows):
-        #print("Rows count: ", event_table, len(rows), "\n")
         for row in rows:
-            #write_csv(event_table, row)
             for event, value in self.query_selected_cols.items():
                 insert_data = (None, )
+                insert_data_dir = {}
                 if event == event_table and not self.skip_insert(event_table, row):
                     for col_name in value:
                         insert_data = insert_data + (row[col_name], )
+                        insert_data_dir[col_name] = row[col_name]
                     q = MySQLQuery.into(Table(event_table))
                     q = q.insert(insert_data)
                     last_insert_id = self.db.execute_query(q.get_sql(), False, True, True)
-                    self.set_nested_cache(row, last_insert_id)
-                    write_csv(event_table, row)
-                    # print("last inserted id: ", last_insert_id)
-                    # print("insert_data ", insert_data)
-                    # print("Insert command: ", q.get_sql())
+                    self.set_nested_cache(event_table, row, last_insert_id, insert_data_dir)
                 elif event_table+'.' in event:
-                    # print("Nested Event: ", event)
-                    cached_value = self.get_cache(self.obtain_nested_event_key(event, row))
-                    # put foreign key here!
+                    cached_key = self.obtain_nested_event_key(event, row)
+                    cached_value = self.get_cache(cached_key)
+                    # INSERT FOREIGN KEY ~!
                     insert_data = insert_data + (cached_value, )
                     for col_name in value:
                         insert_data = insert_data + (row[col_name],)
+                        insert_data_dir[col_name] = row[col_name]
+                    nested_table_file_body_write(row[os.getenv('CASE_ID_FIELD')], cached_key, insert_data_dir)
                     q = MySQLQuery.into(Table(event.replace(event_table+'.', "")))
                     q = q.insert(insert_data)
                     query = q.get_sql()
-                    #print('nested table query: ', query)
                     self.db.execute_query(query, False, True)
-                    # print("corresponding nested event table detected.")
 
     def skip_insert(self, event_table, row):
         if len(self.cached_group_key) == 0:
@@ -335,15 +330,23 @@ class interpreter:
         cache_key = nested_event_name
         for col in self.cached_group_key[nested_event_name]:
             cache_key = cache_key + "." + str(row[col])
-        return cache_key
         #print("generated index: ", cache_key)
+        return cache_key
 
-    def set_nested_cache(self, row, value):
+    def set_nested_cache(self, event_table, row, value, insert_data_dir):
+        # print("self.cached_group_key", self.cached_group_key, event_table)
+        nested_file_processed = []
         for nested_table_name, cols in self.cached_group_key.items():
             cache_key = nested_table_name
             for col in cols:
                 cache_key = cache_key + "." + str(row[col])
-                self.set_cache(cache_key, value)
+            if not self.skip_insert(event_table, row) \
+                    and event_table not in nested_file_processed\
+                    and event_table+"." in nested_table_name:
+                # 1. write it to nested table tmp file
+                nested_table_file_header_write(nested_table_name, insert_data_dir, cache_key)
+                nested_file_processed.append(event_table)
+            self.set_cache(cache_key, value)
 
     def bucket_split(self, in_list):
         bucket_size = 40
@@ -358,13 +361,19 @@ class interpreter:
         return False
 
     def set_cache(self, name, value):
-        cache_size = 10000
+        cache_size = 5000
         self.LRU_cache[name] = value
         if len(self.LRU_cache) > cache_size:
             for key in self.LRU_cache:
+                # write to file instead!
+                handle_overflow_cache(key, self.LRU_cache[key])
                 del self.LRU_cache[key]
                 break
+        #print('self.LRU_cache', self.LRU_cache)
 
     def get_cache(self, name):
-        return self.LRU_cache.get(name)
+        value = self.LRU_cache.get(name)
+        if value is None:
+            value = read_overflow_cache(name)
+        return value
 

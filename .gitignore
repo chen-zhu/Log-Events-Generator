@@ -7,3 +7,4 @@
 .idea/csv-plugin.xml
 *.pyc
 .DS_Store
+output/*
