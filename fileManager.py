@@ -54,11 +54,12 @@ def sorting_csv_files():
             sort_file(dir_path + file_name)
 
 
-def directory_prepare():
-    dir_path = str(pathlib.Path().absolute()) + "/" + OUTPUT_DIR
-    for file_name in os.listdir(dir_path):
-        if '.csv' in file_name:
-            os.remove(dir_path + file_name)
+def directory_prepare(only_clean_cache=False):
+    if not only_clean_cache:
+        dir_path = str(pathlib.Path().absolute()) + "/" + OUTPUT_DIR
+        for file_name in os.listdir(dir_path):
+            if '.csv' in file_name:
+                os.remove(dir_path + file_name)
 
     tmp_dir_path = str(pathlib.Path().absolute()) + "/" + OUTPUT_DIR + "tmp/"
     for file_name in os.listdir(tmp_dir_path):

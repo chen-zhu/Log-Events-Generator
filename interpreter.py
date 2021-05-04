@@ -249,7 +249,8 @@ class interpreter:
             offset = 0
             while True:
                 query = q_obj[offset:page_size].get_sql()
-                print('\n[Generated Query]:\n', query)
+                #print('\n[Generated Query]:\n', query)
+                print(".", end="", flush=True)
                 rows = self.db.execute_query(query, True, False, False, True)
                 #print("Rows count: ", event_table, len(rows))
                 if event_table in self.contain_nested_tables:
@@ -361,7 +362,7 @@ class interpreter:
         return False
 
     def set_cache(self, name, value):
-        cache_size = 5000
+        cache_size = 10000
         self.LRU_cache[name] = value
         if len(self.LRU_cache) > cache_size:
             for key in self.LRU_cache:
