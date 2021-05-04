@@ -41,9 +41,9 @@ if __name__ == "__main__":
 
         db.prepare_target_tables(i.target_col_type)
         i.events_generator()
-        sorting_csv_files()
 
-    print("--- %s seconds ---" % (time.time() - start_time))
+    sorting_csv_files()
+    print("\n--- %s seconds ---" % (time.time() - start_time))
     directory_prepare(True)
 
 
