@@ -7,7 +7,7 @@ from datetime import date, datetime
 import pandas as pd
 from multiprocessing import Lock
 
-load_dotenv()
+load_dotenv(override=True)
 CASE_ID_FIELD = os.getenv('CASE_ID_FIELD')
 OUTPUT_DIR = os.getenv('OUTPUT_DIR')
 EVENT_DATE = os.getenv('EVENT_DATE')
@@ -155,4 +155,12 @@ def process_nested_table_cache():
             csv_file.close()
 
 
-
+def count_dir_lines():
+    counter = 0
+    file_path = str(pathlib.Path().absolute()) + "/" + OUTPUT_DIR
+    for file_name in os.listdir(file_path):
+        if ".csv" in file_name:
+            file = open(file_path + file_name, "r")
+            reader = csv.reader(file)
+            counter += len(list(reader))
+    print("Events Numbers: ", counter)

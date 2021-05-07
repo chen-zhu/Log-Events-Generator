@@ -10,7 +10,7 @@ from fileManager import sorting_csv_files
 import time
 from multiprocessing import Pool
 
-load_dotenv()
+load_dotenv(override=True)
 RULES_DIR = os.getenv('RULES_DIR')
 
 

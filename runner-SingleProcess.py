@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from fileManager import sorting_csv_files, directory_prepare
 import time
 
-load_dotenv()
+load_dotenv(override=True)
 RULES_DIR = os.getenv('RULES_DIR')
 
 if __name__ == "__main__":

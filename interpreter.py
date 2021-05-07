@@ -21,7 +21,8 @@ class interpreter:
         # hold the fact that, variable -> target_name
         self.rename_map = {}
         self.cached_group_key = {}
-        load_dotenv()
+        load_dotenv(override=True)
+        self.event_count = 0
 
     def field_mappings(self):
         # 1. map type
@@ -261,6 +262,8 @@ class interpreter:
                     self.batch_process_source_data(event_table, rows)
                 if len(rows) >= page_size:
                     offset += page_size
+                    if offset % 50000 == 0:
+                        print('\ncurrent offset: ', offset)
                 else:
                     break
 
@@ -273,6 +276,7 @@ class interpreter:
             for row in each_bucket:
                 write_csv(event_table, row)
                 insert_tpl = (None,)
+                self.event_count += 1
                 for key, val in row.items():
                     insert_tpl += (val,)
                 q = q.insert(insert_tpl)
@@ -290,6 +294,7 @@ class interpreter:
                         insert_data_dir[col_name] = row[col_name]
                     q = MySQLQuery.into(Table(event_table))
                     q = q.insert(insert_data)
+                    self.event_count += 1
                     last_insert_id = self.db.execute_query(q.get_sql(), False, True, True)
                     self.set_nested_cache(event_table, row, last_insert_id, insert_data_dir)
                 elif event_table+'.' in event:

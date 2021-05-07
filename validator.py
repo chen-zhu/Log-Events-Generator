@@ -15,7 +15,7 @@ class validator:
     def __init__(self, parser_obj, database_obj):
         self.parser = parser_obj
         self.db = database_obj
-        load_dotenv()
+        load_dotenv(override=True)
 
     def validate_rule_parameters(self):
         print("Validating rule body params...")

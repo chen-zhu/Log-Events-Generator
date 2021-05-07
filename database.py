@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from pypika import Query, Column, Table, Field
 
-load_dotenv()
+load_dotenv(override=True)
 SOURCE_HOST = os.getenv('SOURCE_HOST')
 SOURCE_USER = os.getenv('SOURCE_USER')
 SOURCE_PASSWORD = os.getenv('SOURCE_PASSWORD')
@@ -17,12 +17,13 @@ TARGET_DATABASE = os.getenv('TARGET_DATABASE')
 
 class database:
 
-    def __init__(self):
+    def __init__(self, source_db=None):
+        source_db = source_db if source_db is not None else SOURCE_DATABASE
         self.source_db = mysql.connector.connect(
             host=SOURCE_HOST,
             user=SOURCE_USER,
             password=SOURCE_PASSWORD,
-            database=SOURCE_DATABASE,
+            database=source_db,
             raw=False
         )
         self.source_cursor = self.source_db.cursor()
